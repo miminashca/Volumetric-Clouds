@@ -15,10 +15,8 @@ MonoBehaviour:
   m_Active: 1
   material: {fileID: 2100000, guid: 4af0f5a6417214f6eb3ca5aa470c971e, type: 2}
   renderPassEvent: 550
-  color: {r: 0.9339623, g: 0.36565503, b: 0.36565503, a: 0.5803922}
-  alpha: 1
-  BoundsMin: {x: -250, y: 50, z: -250}
-  BoundsMax: {x: 250, y: 80, z: 250}
+  color: {r: 0.5660378, g: 0.050729785, b: 0.050729785, a: 1}
+  alpha: 0.921
   RenderDistance: 1000
   cloudSettings:
     Steps: 15

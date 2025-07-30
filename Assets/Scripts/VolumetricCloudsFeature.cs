@@ -48,8 +48,6 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     public Color color = new Color(1,1,1,1);
     [Range(0, 1)]
     public float alpha = 1;
-    public Vector3 BoundsMin = new Vector3(-250,50,-250);
-    public Vector3 BoundsMax = new Vector3(250,80,250);
     public float RenderDistance = 1000;
     
     public CloudSettings cloudSettings = new CloudSettings();
@@ -76,6 +74,9 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             public Material material;
             public Color color;
             public float alpha;
+            
+            public Vector3 boundsMin;
+            public Vector3 boundsMax;
         }
 
         // The constructor now only takes the feature reference.
@@ -98,11 +99,15 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 return;
             }
             
-            data.material.SetInt("_Steps", data.cloudSettings.Steps);
-            data.material.SetInt("_LightSteps", data.cloudSettings.LightSteps);
-            data.material.SetFloat("_CloudScale", data.cloudSettings.CloudScale);
+            // data.material.SetInt("_Steps", data.cloudSettings.Steps);
+            // data.material.SetInt("_LightSteps", data.cloudSettings.LightSteps);
+            // data.material.SetFloat("_CloudScale", data.cloudSettings.CloudScale);
             data.material.SetColor("_Color", data.color);
             data.material.SetFloat("_Alpha", data.alpha);
+            // Use the bounds data we passed in.
+            data.material.SetVector("BoundsMin", data.boundsMin);
+            data.material.SetVector("BoundsMax", data.boundsMax);
+            
 
             Debug.Log("Executing cloud pass with density multiplier: " + data.cloudSettings.DensityMultiplier);
             
@@ -114,6 +119,12 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
+            // Find the manager in the scene. If it doesn't exist, we can't run the pass.
+            if (VolumetricCloudsManager.Instance == null || VolumetricCloudsManager.Instance.cloudContainer == null)
+            {
+                return; // Do nothing if the manager or its container isn't set up.
+            }
+            
             const string passName = "Volumetric Clouds Pass";
 
             using (var builder = renderGraph.AddRasterRenderPass<PassData>(passName, out var passData))
@@ -124,6 +135,11 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 passData.material = m_Feature.material;
                 passData.color = m_Feature.color;
                 passData.alpha = m_Feature.alpha;
+                
+                Transform container = VolumetricCloudsManager.Instance.cloudContainer;
+                // Populate the bounds data from the transform.
+                passData.boundsMin = container.position - container.localScale / 2;
+                passData.boundsMax = container.position + container.localScale / 2;
                 
                 passData.cloudSettings = m_Feature.cloudSettings;
                 passData.detailCloudSettings = m_Feature.detailCloudSettings;
