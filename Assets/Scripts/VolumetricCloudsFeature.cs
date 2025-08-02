@@ -177,6 +177,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             Debug.LogWarningFormat("Missing Material. {0} pass will not be executed.", GetType().Name);
             return;
         }
+        m_ScriptablePass.ConfigureInput(ScriptableRenderPassInput.Depth);
         renderer.EnqueuePass(m_ScriptablePass);
     }
 }

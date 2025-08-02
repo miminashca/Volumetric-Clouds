@@ -56,6 +56,10 @@ Shader "Unlit/VolumetricClouds"
             TEXTURE2D_X(_BlitTexture);
             SAMPLER(sampler_BlitTexture);
 
+            // THE FIX: Declare the camera depth texture so we can access it.
+            TEXTURE2D_X_FLOAT(_CameraDepthTexture);
+            SAMPLER(sampler_CameraDepthTexture);
+            
             struct Attributes
             {
                 float4 positionOS   : POSITION;
@@ -97,6 +101,7 @@ Shader "Unlit/VolumetricClouds"
 
                 // Blue Noise Settings
                 float _RayOffsetStrength;
+
             CBUFFER_END
             
             // --- Declare Textures ---
@@ -106,6 +111,7 @@ Shader "Unlit/VolumetricClouds"
             SAMPLER(sampler_DetailCloudNoiseTexure);
             TEXTURE2D(_BlueNoiseTexure);
             SAMPLER(sampler_BlueNoiseTexure);
+
 
             Varyings vert(Attributes IN)
             {
@@ -149,6 +155,12 @@ Shader "Unlit/VolumetricClouds"
                 // 1. Get the background color from the scene
                 half4 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_BlitTexture, IN.uv);
 
+                // Depth Check Logic
+                // Sample the raw, non-linear depth value (0-1 range) from the depth texture.
+                float rawDepth = SAMPLE_TEXTURE2D_X(_CameraDepthTexture, sampler_CameraDepthTexture, IN.uv);
+                // Convert the raw depth into a linear distance from the camera.
+                float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
+
                 // 2. Get the ray origin in WORLD space
                 float3 worldRayOrigin = _WorldSpaceCameraPos;
 
@@ -169,9 +181,10 @@ Shader "Unlit/VolumetricClouds"
                 // 6. Perform the intersection test in LOCAL space
                 float3 invLocalRayDir = 1.0 / localRayDir;
                 float2 rayBoxInfo = rayBoxDst(localBoundsMin, localBoundsMax, localRayOrigin, invLocalRayDir);
+                float dstToBox = rayBoxInfo.x;
                 float dstInsideBox = rayBoxInfo.y;
                 
-                bool rayHitBox = dstInsideBox > 0;
+                bool rayHitBox = dstInsideBox > 0 && dstToBox < sceneDepth;;
 
                 if (!rayHitBox)
                 {
