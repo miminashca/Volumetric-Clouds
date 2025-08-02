@@ -30,8 +30,6 @@ Shader "Unlit/VolumetricClouds"
         // Feature Settings
         _Color ("Cloud Color", Color) = (1, 1, 1, 0.5) 
         _Alpha ("Alpha", Range(0, 1)) = 1
-        _BoundsMin ("Bounds Min", Vector) = (-250, 50, -250, 0)
-        _BoundsMax ("Bounds Max", Vector) = (250, 80, 250, 0)
         _RenderDistance ("Render Distance", Float) = 1000
     }
     SubShader
@@ -52,6 +50,7 @@ Shader "Unlit/VolumetricClouds"
             #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             // The Fullscreen Pass feature provides the previous pass's result in _BlitTexture
             TEXTURE2D_X(_BlitTexture);
@@ -67,14 +66,14 @@ Shader "Unlit/VolumetricClouds"
             {
                 float4 positionHCS  : SV_POSITION;
                 float2 uv           : TEXCOORD0;
+                float3 viewVector   : TEXCOORD1;
             };
             
             CBUFFER_START(UnityPerMaterial)
                 // Feature Settings
                 half4 _Color;
                 float _Alpha;
-                float3 _BoundsMin;
-                float3 _BoundsMax;
+                float4x4 _ContainerWorldToLocal;
                 float _RenderDistance;
 
                 // Cloud Settings
@@ -114,6 +113,12 @@ Shader "Unlit/VolumetricClouds"
                 // Standard fullscreen triangle generation
                 OUT.positionHCS = GetFullScreenTriangleVertexPosition(IN.vertexID);
                 OUT.uv = GetFullScreenTriangleTexCoord(IN.vertexID);
+                OUT.viewVector = GetCameraRelativePositionWS(OUT.positionHCS);
+
+                // Correct the aspect ratio stretching.
+                // We scale the horizontal component of the view vector by the aspect ratio.
+                OUT.viewVector.x *= _ScreenParams.x / _ScreenParams.y;
+
                 return OUT;
             }
 
@@ -140,11 +145,47 @@ Shader "Unlit/VolumetricClouds"
                 return float2(dstToBox, dstInsideBox);
             }
             
-            half4 frag(Varyings IN) : SV_Target
-            {
+            half4 frag(Varyings IN) : SV_Target {
+                // 1. Get the background color from the scene
+                half4 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_BlitTexture, IN.uv);
+
+                // 2. Get the ray origin in WORLD space
+                float3 worldRayOrigin = _WorldSpaceCameraPos;
+
+                // 3. THE FIX: Convert the ray direction from View Space to World Space
+                // IN.viewVector is the direction in camera-relative space.
+                float3 viewSpaceDir = normalize(IN.viewVector);
+                // We multiply by the inverse view matrix to get the true world space direction.
+                float3 worldRayDir = mul((float3x3)UNITY_MATRIX_I_V, float3(viewSpaceDir.x, -viewSpaceDir.y, -viewSpaceDir.z));
+
+                // 4. Transform the WORLD space ray into the container's LOCAL space
+                float3 localRayOrigin = mul(_ContainerWorldToLocal, float4(worldRayOrigin, 1.0)).xyz;
+                float3 localRayDir = mul((float3x3)_ContainerWorldToLocal, worldRayDir);
+
+                // 5. Define the simple LOCAL bounds of a default cube
+                float3 localBoundsMin = -0.5;
+                float3 localBoundsMax = 0.5;
+
+                // 6. Perform the intersection test in LOCAL space
+                float3 invLocalRayDir = 1.0 / localRayDir;
+                float2 rayBoxInfo = rayBoxDst(localBoundsMin, localBoundsMax, localRayOrigin, invLocalRayDir);
+                float dstInsideBox = rayBoxInfo.y;
+                
+                bool rayHitBox = dstInsideBox > 0;
+
+                if (!rayHitBox)
+                {
+                    return sceneColor; 
+                }
+                
+                // If the ray hits, draw the cloud color
                 half4 cloudColor = _Color;
                 cloudColor.a *= _Alpha;
-                return cloudColor;
+                return lerp(sceneColor, cloudColor, cloudColor.a);
+                
+                // half4 cloudColor = _Color;
+                // cloudColor.a *= _Alpha;
+                // return cloudColor;
             }
             
             ENDHLSL

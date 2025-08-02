@@ -75,8 +75,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             public Color color;
             public float alpha;
             
-            public Vector3 boundsMin;
-            public Vector3 boundsMax;
+            public Matrix4x4 containerWorldToLocal;
         }
 
         // The constructor now only takes the feature reference.
@@ -104,9 +103,8 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             // data.material.SetFloat("_CloudScale", data.cloudSettings.CloudScale);
             data.material.SetColor("_Color", data.color);
             data.material.SetFloat("_Alpha", data.alpha);
-            // Use the bounds data we passed in.
-            data.material.SetVector("BoundsMin", data.boundsMin);
-            data.material.SetVector("BoundsMax", data.boundsMax);
+            
+            data.material.SetMatrix("_ContainerWorldToLocal", data.containerWorldToLocal);
             
 
             Debug.Log("Executing cloud pass with density multiplier: " + data.cloudSettings.DensityMultiplier);
@@ -138,8 +136,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 
                 Transform container = VolumetricCloudsManager.Instance.cloudContainer;
                 // Populate the bounds data from the transform.
-                passData.boundsMin = container.position - container.localScale / 2;
-                passData.boundsMax = container.position + container.localScale / 2;
+                passData.containerWorldToLocal = container.worldToLocalMatrix;
                 
                 passData.cloudSettings = m_Feature.cloudSettings;
                 passData.detailCloudSettings = m_Feature.detailCloudSettings;

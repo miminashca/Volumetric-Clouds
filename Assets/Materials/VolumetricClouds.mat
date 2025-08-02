@@ -58,8 +58,8 @@ Material:
     - _Steps: 15
     - _Threshold: 0.1
     m_Colors:
-    - _BoundsMax: {r: 250, g: 80, b: 250, a: 0}
-    - _BoundsMin: {r: -250, g: 50, b: -250, a: 0}
+    - _BoundsMax: {r: 1.4990219, g: 3.599022, b: 13.099022, a: 0}
+    - _BoundsMin: {r: -1.4990219, g: 0.600978, b: 10.100979, a: 0}
     - _Color: {r: 0.5660378, g: 0.050729785, b: 0.050729785, a: 1}
     - _DetailCloudWind: {r: 0.5, g: 0, b: 0, a: 0}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
