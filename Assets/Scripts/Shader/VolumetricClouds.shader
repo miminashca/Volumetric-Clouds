@@ -158,11 +158,9 @@ Shader "Unlit/VolumetricClouds"
                 // Calculate texture sample positions
                 float3 size = _BoundsMax - _BoundsMin;
                 float3 boundsCentre = (_BoundsMin+_BoundsMax) * 0.5f;
-                float3 uvw = position * _CloudScale * 0.001 + _Wind.xyz * 0.1 * _Time.y * _CloudScale;
-
-
-                float3 duvw = position * _DetailCloudScale * 0.001 + _DetailCloudWind.xyz * 0.1 * _Time.y * _DetailCloudScale;
-
+                //float3 uvw = position * _CloudScale * 0.001 + _Wind.xyz * 0.1 * _Time.y * _CloudScale;
+                float3 uvw = (size * 0.5 + position) * _CloudScale * 0.001 + _Wind.xyz * 0.1 * _Time.y * _CloudScale;
+                
                 float dstFromEdgeX = min(_ContainerEdgeFadeDst, min(position.x - _BoundsMin.x, _BoundsMax.x - position.x));
                 float dstFromEdgeY = min(_CloudSmooth, min(position.y - _BoundsMin.y, _BoundsMax.y - position.y));
                 float dstFromEdgeZ = min(_ContainerEdgeFadeDst, min(position.z - _BoundsMin.z, _BoundsMax.z - position.z));
@@ -170,27 +168,35 @@ Shader "Unlit/VolumetricClouds"
                 float edgeWeight = min(dstFromEdgeZ,dstFromEdgeX)/_ContainerEdgeFadeDst;
 
                 float shapeNoise = SAMPLE_TEXTURE3D_LOD(_CloudNoiseTexure, sampler_CloudNoiseTexure, uvw, 0);
-                float detailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, duvw, 0);
+
+                if (shapeNoise > 0)
+                {
+                    float3 duvw = (size * 0.5 + position) * _DetailCloudScale * 0.001 + _DetailCloudWind.xyz * 0.1 * _Time.y * _DetailCloudScale;
+                    float detailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, duvw, 0);
+                    
+                    float density = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
+                    return density * edgeWeight * (dstFromEdgeY/_CloudSmooth);
+                }
                 
-                float density = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
-                return density * edgeWeight * (dstFromEdgeY/_CloudSmooth);
+                return 0;
             }
             
             float lightmarch(float3 position) {
                 float3 dirToLight = GetMainLight().direction;
-                //float3 dirToLightLocal = mul((float3x3)_ContainerWorldToLocal, dirToLight);
                 
                 float dstInsideBox = rayBoxDst(_BoundsMin, _BoundsMax, position, 1/dirToLight).y;
                 
                 float stepSize = dstInsideBox/_LightSteps;
                 float totalDensity = 0;
-
+                
+                position += dirToLight * stepSize * .5;
+                
                 for (int step = 0; step < _LightSteps; step++) {
-                    position += dirToLight * stepSize;
                     totalDensity += max(0, sampleDensity(position) * stepSize);
+                    position += dirToLight * stepSize;
                 }
 
-                float transmittance = exp(-totalDensity * _LightAbsorptionTowardSun);
+                float transmittance = beer(totalDensity * _LightAbsorptionTowardSun);
                 return _DarknessThreshold + transmittance * (1-_DarknessThreshold);
             }
             

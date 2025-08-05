@@ -15,27 +15,27 @@ MonoBehaviour:
   m_Active: 1
   material: {fileID: 2100000, guid: 4af0f5a6417214f6eb3ca5aa470c971e, type: 2}
   renderPassEvent: 550
-  color: {r: 1, g: 1, b: 1, a: 1}
+  color: {r: 0.9811321, g: 0.85665536, b: 0.8006408, a: 1}
   renderDistance: 10000
   cloudSettings:
-    LightAbsorptionThroughCloud: 0.4
+    LightAbsorptionThroughCloud: 0.46
     LightAbsorptionTowardSun: 0.43
-    Steps: 15
-    LightSteps: 5
+    Steps: 30
+    LightSteps: 6
     CloudNoiseTexure: {fileID: 11700000, guid: da2ff9144035b4b3a9353bed8293c889, type: 2}
-    CloudScale: 1.37
-    CloudSmooth: 84.2
-    Wind: {x: 0, y: 0, z: 0}
-    PhaseParams: {x: 1, y: -0.86, z: 0.47, w: 1.55}
-    ContainerEdgeFadeDst: 45
-    DensityThreshold: 0.52
-    DensityMultiplier: 3.39
+    CloudScale: 0.8
+    CloudSmooth: 45
+    Wind: {x: 0.03, y: 0, z: 0}
+    PhaseParams: {x: 0.97, y: -0.86, z: 0.47, w: 0.47}
+    ContainerEdgeFadeDst: 1
+    DensityThreshold: 0.53
+    DensityMultiplier: 3
     DarknessThreshold: 0.25
   detailCloudSettings:
-    detailCloudWeight: 0.116
+    detailCloudWeight: 0.094
     DetailCloudNoiseTexure: {fileID: 11700000, guid: 70847bbd9900c464ab8ba2cc6ef94e15, type: 2}
-    DetailCloudScale: 5.35
-    DetailCloudWind: {x: 0, y: 0, z: 0}
+    DetailCloudScale: 3.07
+    DetailCloudWind: {x: 0.07, y: 0, z: 0}
   blueNoiseSettings:
     BlueNoiseTexure: {fileID: 2800000, guid: 3c1507379d7fe415a8f524a9a7e71bd2, type: 3}
     RayOffsetStrength: 3
