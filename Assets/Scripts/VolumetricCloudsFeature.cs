@@ -10,18 +10,19 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     [System.Serializable]
     public class CloudSettings
     {
+        public float LightAbsorptionThroughCloud = 0.15f;
+        public float LightAbsorptionTowardSun = 0.25f;
+
         public int Steps = 15;
-        public int LightSteps = 10;
-        public Texture2D CloudNoiseTexure;
+        public int LightSteps = 15;
+        public Texture3D CloudNoiseTexure;
         public float CloudScale = 1;
         public float CloudSmooth = 5;
         public Vector3 Wind = new Vector3(1,0,0);
-        public float LightAbsorptionThroughCloud = 0.15f;
         public Vector4 PhaseParams = new Vector4(0.1f,0.25f,0.5f,0);
         public float ContainerEdgeFadeDst = 45;
         public float DensityThreshold = 0.25f;
         public float DensityMultiplier = 1;
-        public float LightAbsorptionTowardSun = 0.25f;
         public float DarknessThreshold = 0.1f;
     }
 
@@ -46,9 +47,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     public Material material; // The material to use for the pass.
     public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingSkybox;
     public Color color = new Color(1,1,1,1);
-    [Range(0, 1)]
-    public float alpha = 1;
-    public float RenderDistance = 1000;
+    public float renderDistance = 1000;
     
     public CloudSettings cloudSettings = new CloudSettings();
     public DetailCloudSettings detailCloudSettings = new DetailCloudSettings();
@@ -73,9 +72,12 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             // Other pass-specific data.
             public Material material;
             public Color color;
-            public float alpha;
+            public float renderDistance;
             
             public Matrix4x4 containerWorldToLocal;
+            public Matrix4x4 containerLocalToWorld;
+            public Vector3 _BoundsMin, _BoundsMax;
+            public Vector3 containerScale;
         }
 
         // The constructor now only takes the feature reference.
@@ -89,22 +91,47 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
         // This is the static execution function. It only knows about PassData.
         static void ExecutePass(PassData data, RasterGraphContext context)
         {
-            // --- This is where your rendering logic goes ---
-            // You can now access all your settings through the 'data' parameter.
-            // Example: Set material properties
             if (data.material == null)
             {
                 Debug.LogError("Material not set for the custom render pass.");
                 return;
             }
             
-            // data.material.SetInt("_Steps", data.cloudSettings.Steps);
-            // data.material.SetInt("_LightSteps", data.cloudSettings.LightSteps);
-            // data.material.SetFloat("_CloudScale", data.cloudSettings.CloudScale);
             data.material.SetColor("_Color", data.color);
-            data.material.SetFloat("_Alpha", data.alpha);
+            data.material.SetFloat("_RenderDistance", data.renderDistance);
             
             data.material.SetMatrix("_ContainerWorldToLocal", data.containerWorldToLocal);
+            data.material.SetMatrix("_ContainerLocalToWorld", data.containerLocalToWorld);
+            data.material.SetVector("_BoundsMin", data._BoundsMin);
+            data.material.SetVector("_BoundsMax", data._BoundsMax);
+            data.material.SetVector("_ContainerScale", data.containerScale);
+            
+            // Cloud Settings
+            data.material.SetInt("_Steps", data.cloudSettings.Steps);
+            data.material.SetInt("_LightSteps", data.cloudSettings.LightSteps);
+            data.material.SetFloat("_CloudScale", data.cloudSettings.CloudScale);
+            data.material.SetFloat("_CloudSmooth", data.cloudSettings.CloudSmooth);
+            data.material.SetVector("_Wind", data.cloudSettings.Wind);
+            data.material.SetFloat("_LightAbsorptionThroughCloud", data.cloudSettings.LightAbsorptionThroughCloud);
+            data.material.SetVector("_PhaseParams", data.cloudSettings.PhaseParams);
+            data.material.SetFloat("_ContainerEdgeFadeDst", data.cloudSettings.ContainerEdgeFadeDst);
+            data.material.SetFloat("_DensityThreshold", data.cloudSettings.DensityThreshold);
+            data.material.SetFloat("_DensityMultiplier", data.cloudSettings.DensityMultiplier);
+            data.material.SetFloat("_LightAbsorptionTowardSun", data.cloudSettings.LightAbsorptionTowardSun);
+            data.material.SetFloat("_DarknessThreshold", data.cloudSettings.DarknessThreshold);
+
+            // Detail Cloud Settings
+            data.material.SetFloat("_DetailCloudWeight", data.detailCloudSettings.detailCloudWeight);
+            data.material.SetFloat("_DetailCloudScale", data.detailCloudSettings.DetailCloudScale);
+            data.material.SetVector("_DetailCloudWind", data.detailCloudSettings.DetailCloudWind);
+
+            // Blue Noise Settings
+            data.material.SetFloat("_RayOffsetStrength", data.blueNoiseSettings.RayOffsetStrength);
+            
+            // Textures
+            data.material.SetTexture("_CloudNoiseTexure", data.cloudSettings.CloudNoiseTexure);
+            data.material.SetTexture("_DetailCloudNoiseTexure", data.detailCloudSettings.DetailCloudNoiseTexure);
+            data.material.SetTexture("_BlueNoiseTexure", data.blueNoiseSettings.BlueNoiseTexure);
             
 
             Debug.Log("Executing cloud pass with density multiplier: " + data.cloudSettings.DensityMultiplier);
@@ -132,11 +159,15 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 // This happens every frame, ensuring the latest Inspector values are used.
                 passData.material = m_Feature.material;
                 passData.color = m_Feature.color;
-                passData.alpha = m_Feature.alpha;
+                passData.renderDistance = m_Feature.renderDistance;
                 
                 Transform container = VolumetricCloudsManager.Instance.cloudContainer;
                 // Populate the bounds data from the transform.
                 passData.containerWorldToLocal = container.worldToLocalMatrix;
+                passData.containerLocalToWorld = container.localToWorldMatrix;
+                passData._BoundsMin = container.position - container.lossyScale / 2;
+                passData._BoundsMax = container.position + container.lossyScale / 2;
+                passData.containerScale = container.lossyScale;
                 
                 passData.cloudSettings = m_Feature.cloudSettings;
                 passData.detailCloudSettings = m_Feature.detailCloudSettings;

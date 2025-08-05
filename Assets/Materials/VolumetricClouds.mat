@@ -24,15 +24,15 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BlueNoiseTexure:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 3c1507379d7fe415a8f524a9a7e71bd2, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _CloudNoiseTexure:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 11700000, guid: da2ff9144035b4b3a9353bed8293c889, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailCloudNoiseTexure:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 11700000, guid: 70847bbd9900c464ab8ba2cc6ef94e15, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -42,28 +42,28 @@ Material:
     m_Ints: []
     m_Floats:
     - _Alpha: 1
-    - _CloudScale: 1
-    - _CloudSmooth: 5
+    - _CloudScale: 1.37
+    - _CloudSmooth: 84.2
     - _ContainerEdgeFadeDst: 45
-    - _DarknessThreshold: 0.1
-    - _DensityMultiplier: 1
-    - _DensityThreshold: 0.25
-    - _DetailCloudScale: 1
-    - _DetailCloudWeight: 0.24
-    - _LightAbsorptionThroughCloud: 0.15
-    - _LightAbsorptionTowardSun: 0.25
-    - _LightSteps: 10
-    - _RayOffsetStrength: 50
-    - _RenderDistance: 1000
+    - _DarknessThreshold: 0.25
+    - _DensityMultiplier: 3.39
+    - _DensityThreshold: 0.52
+    - _DetailCloudScale: 5.35
+    - _DetailCloudWeight: 0.116
+    - _LightAbsorptionThroughCloud: 0.4
+    - _LightAbsorptionTowardSun: 0.43
+    - _LightSteps: 5
+    - _RayOffsetStrength: 3
+    - _RenderDistance: 10000
     - _Steps: 15
     - _Threshold: 0.1
     m_Colors:
-    - _BoundsMax: {r: 1.4990219, g: 3.599022, b: 13.099022, a: 0}
-    - _BoundsMin: {r: -1.4990219, g: 0.600978, b: 10.100979, a: 0}
-    - _Color: {r: 0, g: 0, b: 0, a: 1}
-    - _DetailCloudWind: {r: 0.5, g: 0, b: 0, a: 0}
+    - _BoundsMax: {r: 400, g: 213.76, b: 400, a: 0}
+    - _BoundsMin: {r: -400, g: -213.76, b: -400, a: 0}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DetailCloudWind: {r: 0, g: 0, b: 0, a: 0}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PhaseParams: {r: 0.1, g: 0.25, b: 0.5, a: 0}
-    - _Wind: {r: 1, g: 0, b: 0, a: 0}
+    - _PhaseParams: {r: 1, g: -0.86, b: 0.47, a: 1.55}
+    - _Wind: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

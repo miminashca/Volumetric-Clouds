@@ -2,35 +2,6 @@ Shader "Unlit/VolumetricClouds"
 {
     Properties
     {
-        // Cloud Settings
-        _CloudNoiseTexure ("Cloud Noise Texture", 2D) = "white" {}
-        _Steps ("Steps", Int) = 15
-        _LightSteps ("Light Steps", Int) = 10
-        _CloudScale ("Cloud Scale", Float) = 1
-        _CloudSmooth ("Cloud Smooth", Float) = 5
-        _Wind ("Wind", Vector) = (1, 0, 0, 0)
-        _LightAbsorptionThroughCloud ("Light Absorption Through Cloud", Float) = 0.15
-        _PhaseParams ("Phase Params", Vector) = (0.1, 0.25, 0.5, 0)
-        _ContainerEdgeFadeDst ("Container Edge Fade Distance", Float) = 45
-        _DensityThreshold ("Density Threshold", Float) = 0.25
-        _DensityMultiplier ("Density Multiplier", Float) = 1
-        _LightAbsorptionTowardSun ("Light Absorption Toward Sun", Float) = 0.25
-        _DarknessThreshold ("Darkness Threshold", Float) = 0.1
-
-        // Detail Cloud Settings
-        _DetailCloudNoiseTexure ("Detail Cloud Noise Texture", 3D) = "white" {}
-        _DetailCloudWeight ("Detail Cloud Weight", Range(0, 1)) = 0.24
-        _DetailCloudScale ("Detail Cloud Scale", Float) = 1
-        _DetailCloudWind ("Detail Cloud Wind", Vector) = (0.5, 0, 0, 0)
-
-        // Blue Noise Settings
-        _BlueNoiseTexure ("Blue Noise Texture", 2D) = "white" {}
-        _RayOffsetStrength ("Ray Offset Strength", Float) = 50
-
-        // Feature Settings
-        _Color ("Cloud Color", Color) = (1, 1, 1, 0.5) 
-        _Alpha ("Alpha", Range(0, 1)) = 1
-        _RenderDistance ("Render Distance", Float) = 1000
     }
     SubShader
     {
@@ -76,8 +47,10 @@ Shader "Unlit/VolumetricClouds"
             CBUFFER_START(UnityPerMaterial)
                 // Feature Settings
                 half4 _Color;
-                float _Alpha;
                 float4x4 _ContainerWorldToLocal;
+                float4x4 _ContainerLocalToWorld;
+                float3 _BoundsMin, _BoundsMax;
+                float3 _ContainerScale;
                 float _RenderDistance;
 
                 // Cloud Settings
@@ -105,7 +78,7 @@ Shader "Unlit/VolumetricClouds"
             CBUFFER_END
             
             // --- Declare Textures ---
-            TEXTURE2D(_CloudNoiseTexure);
+            TEXTURE3D(_CloudNoiseTexure);
             SAMPLER(sampler_CloudNoiseTexure);
             TEXTURE3D(_DetailCloudNoiseTexure);
             SAMPLER(sampler_DetailCloudNoiseTexure);
@@ -120,12 +93,41 @@ Shader "Unlit/VolumetricClouds"
                 OUT.positionHCS = GetFullScreenTriangleVertexPosition(IN.vertexID);
                 OUT.uv = GetFullScreenTriangleTexCoord(IN.vertexID);
                 OUT.viewVector = GetCameraRelativePositionWS(OUT.positionHCS);
-
-                // Correct the aspect ratio stretching.
-                // We scale the horizontal component of the view vector by the aspect ratio.
+                // Scale the horizontal component of the view vector by the aspect ratio.
                 OUT.viewVector.x *= _ScreenParams.x / _ScreenParams.y;
 
                 return OUT;
+            }
+
+            float remap(float v, float minOld, float maxOld, float minNew, float maxNew) {
+                return minNew + (v-minOld) * (maxNew - minNew) / (maxOld-minOld);
+            }
+            
+            float2 squareUV(float2 uv) {
+                float width = _ScreenParams.x;
+                float height =_ScreenParams.y;
+                //float minDim = min(width, height);
+                float scale = 1000;
+                float x = uv.x * width;
+                float y = uv.y * height;
+                return float2 (x/scale, y/scale);
+            }
+            // Henyey-Greenstein
+            float hg(float a, float g) {
+                float g2 = g*g;
+                return (1-g2) / (4*3.1415*pow(1+g2-2*g*(a), 1.5));
+            }
+            float phase(float a) {
+                float blend = .5;
+                float hgBlend = hg(a,_PhaseParams.x) * (1-blend) + hg(a,-_PhaseParams.y) * blend;
+                return _PhaseParams.z + hgBlend * _PhaseParams.w;
+            }
+            float beer(float d) {
+                float beer = exp(-d);
+                return beer;
+            }
+            float remap01(float v, float low, float high) {
+                return (v-low)/(high-low);
             }
 
             float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 invRaydir) {
@@ -151,50 +153,133 @@ Shader "Unlit/VolumetricClouds"
                 return float2(dstToBox, dstInsideBox);
             }
             
-            half4 frag(Varyings IN) : SV_Target {
-                // 1. Get the background color from the scene
-                half4 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_BlitTexture, IN.uv);
+            float3 sampleDensity(float3 position)
+            {
+                // Calculate texture sample positions
+                float3 size = _BoundsMax - _BoundsMin;
+                float3 boundsCentre = (_BoundsMin+_BoundsMax) * 0.5f;
+                float3 uvw = position * _CloudScale * 0.001 + _Wind.xyz * 0.1 * _Time.y * _CloudScale;
 
-                // Depth Check Logic
-                // Sample the raw, non-linear depth value (0-1 range) from the depth texture.
+
+                float3 duvw = position * _DetailCloudScale * 0.001 + _DetailCloudWind.xyz * 0.1 * _Time.y * _DetailCloudScale;
+
+                float dstFromEdgeX = min(_ContainerEdgeFadeDst, min(position.x - _BoundsMin.x, _BoundsMax.x - position.x));
+                float dstFromEdgeY = min(_CloudSmooth, min(position.y - _BoundsMin.y, _BoundsMax.y - position.y));
+                float dstFromEdgeZ = min(_ContainerEdgeFadeDst, min(position.z - _BoundsMin.z, _BoundsMax.z - position.z));
+                
+                float edgeWeight = min(dstFromEdgeZ,dstFromEdgeX)/_ContainerEdgeFadeDst;
+
+                float shapeNoise = SAMPLE_TEXTURE3D_LOD(_CloudNoiseTexure, sampler_CloudNoiseTexure, uvw, 0);
+                float detailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, duvw, 0);
+                
+                float density = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
+                return density * edgeWeight * (dstFromEdgeY/_CloudSmooth);
+            }
+            
+            float lightmarch(float3 position) {
+                float3 dirToLight = GetMainLight().direction;
+                //float3 dirToLightLocal = mul((float3x3)_ContainerWorldToLocal, dirToLight);
+                
+                float dstInsideBox = rayBoxDst(_BoundsMin, _BoundsMax, position, 1/dirToLight).y;
+                
+                float stepSize = dstInsideBox/_LightSteps;
+                float totalDensity = 0;
+
+                for (int step = 0; step < _LightSteps; step++) {
+                    position += dirToLight * stepSize;
+                    totalDensity += max(0, sampleDensity(position) * stepSize);
+                }
+
+                float transmittance = exp(-totalDensity * _LightAbsorptionTowardSun);
+                return _DarknessThreshold + transmittance * (1-_DarknessThreshold);
+            }
+            
+            // In your VolumetricClouds.shader
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                // --- 1. Setup & Scene Depth ---
+                half4 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_BlitTexture, IN.uv);
                 float rawDepth = SAMPLE_TEXTURE2D_X(_CameraDepthTexture, sampler_CameraDepthTexture, IN.uv);
-                // Convert the raw depth into a linear distance from the camera.
+
                 float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
 
-                // 2. Get the ray origin in WORLD space
+                // --- 2. Ray Setup in World and Local Space ---
                 float3 worldRayOrigin = _WorldSpaceCameraPos;
-
-                // 3. THE FIX: Convert the ray direction from View Space to World Space
-                // IN.viewVector is the direction in camera-relative space.
                 float3 viewSpaceDir = normalize(IN.viewVector);
-                // We multiply by the inverse view matrix to get the true world space direction.
                 float3 worldRayDir = mul((float3x3)UNITY_MATRIX_I_V, float3(viewSpaceDir.x, -viewSpaceDir.y, -viewSpaceDir.z));
-
-                // 4. Transform the WORLD space ray into the container's LOCAL space
-                float3 localRayOrigin = mul(_ContainerWorldToLocal, float4(worldRayOrigin, 1.0)).xyz;
-                float3 localRayDir = mul((float3x3)_ContainerWorldToLocal, worldRayDir);
-
-                // 5. Define the simple LOCAL bounds of a default cube
-                float3 localBoundsMin = -0.5;
-                float3 localBoundsMax = 0.5;
-
-                // 6. Perform the intersection test in LOCAL space
-                float3 invLocalRayDir = 1.0 / localRayDir;
-                float2 rayBoxInfo = rayBoxDst(localBoundsMin, localBoundsMax, localRayOrigin, invLocalRayDir);
+                
+                // float3 localRayOrigin = mul(_ContainerWorldToLocal, float4(worldRayOrigin, 1.0)).xyz;
+                // float3 localRayDir = mul((float3x3)_ContainerWorldToLocal, worldRayDir);
+                
+                // --- 3. Ray-Box Intersection ---
+                //float3 invLocalRayDir = 1.0 / localRayDir;
+                float2 rayBoxInfo = rayBoxDst(_BoundsMin, _BoundsMax, worldRayOrigin, 1/worldRayDir);
                 float dstToBox = rayBoxInfo.x;
                 float dstInsideBox = rayBoxInfo.y;
                 
-                bool rayHitBox = dstInsideBox > 0 && dstToBox < sceneDepth;;
+                //float worldDistToBox = dstToBox * length(mul((float3x3)_ContainerLocalToWorld, localRayDir));
 
-                if (!rayHitBox)
+                if (dstInsideBox <= 0 || dstToBox > sceneDepth || dstToBox  > _RenderDistance)
                 {
                     return sceneColor; 
                 }
+
+                // --- 4. Raymarching Loop ---
+                float stepSize = dstInsideBox / _Steps;
+                float dstLimit = min(dstInsideBox, sceneDepth - dstToBox);
+
+                float randomOffset = SAMPLE_TEXTURE2D_LOD(_BlueNoiseTexure, sampler_BlueNoiseTexure, squareUV(IN.uv*3), 0) * _RayOffsetStrength;
                 
+                float dstTravelled = randomOffset * stepSize;
+                float3 entryPoint = worldRayOrigin + worldRayDir * dstToBox;
+
+                float transmittance = 1;
+                float3 lightEnergy = 0;
+                
+                float cosAngle = dot(worldRayDir, GetMainLight().direction);
+                float phaseVal = phase(cosAngle);
+
+                while (dstTravelled < dstLimit)
+                {
+                    worldRayOrigin = entryPoint + worldRayDir * dstTravelled;
+                    
+                    float density = sampleDensity(worldRayOrigin);
+                    
+                    if (density > 0)
+                    {
+                        // Get the world position only when we need it for lighting
+                        //float3 worldPos = mul(_ContainerLocalToWorld, float4(localPos, 1.0)).xyz;
+                        float lightTransmittance = lightmarch(worldRayOrigin); // lightmarch also needs local pos
+                        
+                        lightEnergy += density * stepSize * transmittance * lightTransmittance * phaseVal;
+                        transmittance *= exp(-density * stepSize * _LightAbsorptionThroughCloud);
+                    
+                        if (transmittance < 0.1)
+                        {
+                            break;
+                        }
+                    }
+                    dstTravelled += stepSize;
+                }
+
+                // --- 5. Final Color Calculation ---
+                // The final color of the cloud itself is the light it scattered, tinted by the main color.
+                float4 cloudCol = float4(lightEnergy * _Color.rgb, 1);
+                
+                // THE FIX FOR THE RETURN VALUE:
+                // Your pass is set to 'Blend SrcAlpha OneMinusSrcAlpha'.
+                // This means the GPU will automatically do: (ShaderOutput.rgb * ShaderOutput.a) + (SceneColor * (1 - ShaderOutput.a))
+                // Therefore, we must output the cloud's color directly, and use its calculated opacity (1 - transmittance) as the alpha.
+                
+                // Calculate final alpha based on how much light was blocked.
+                float finalAlpha = 1.0 - transmittance;
+
+                // Return the cloud's lit color and its calculated alpha. The GPU does the blending.
+                //return float4(cloudCol, finalAlpha);
                 // If the ray hits, draw the cloud color
-                half4 cloudColor = _Color;
-                cloudColor.a *= _Alpha;
-                return lerp(sceneColor, cloudColor, cloudColor.a);
+               // half4 cloudColor = _Color;
+               return lerp(sceneColor, cloudCol, finalAlpha);
                 
                 // half4 cloudColor = _Color;
                 // cloudColor.a *= _Alpha;
