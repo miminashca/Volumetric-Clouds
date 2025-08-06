@@ -10,20 +10,51 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     [System.Serializable]
     public class CloudSettings
     {
-        public float LightAbsorptionThroughCloud = 0.15f;
-        public float LightAbsorptionTowardSun = 0.25f;
-
         public int Steps = 15;
-        public int LightSteps = 15;
         public Texture3D CloudNoiseTexure;
         public float CloudScale = 1;
-        public float CloudSmooth = 5;
         public Vector3 Wind = new Vector3(1,0,0);
-        public Vector4 PhaseParams = new Vector4(0.1f,0.25f,0.5f,0);
-        public float ContainerEdgeFadeDst = 45;
+        
         public float DensityThreshold = 0.25f;
         public float DensityMultiplier = 1;
+        [Range(0f, 1f)]
+        public float ContainerFade = 0;
+        
+        [Header("Vertical Shape")]
+        [Tooltip("The height percentage where the cloud begins to fade in from the bottom.")]
+        [Range(0, 1)]
+        public float bottomFadeStart = 0f;
+
+        [Tooltip("The height percentage where the cloud reaches full density from the bottom.")]
+        [Range(0, 1)]
+        public float bottomFadeEnd = 0.2f;
+
+        [Tooltip("The height percentage where the cloud begins to fade out toward the top.")]
+        [Range(0, 1)]
+        public float topFadeStart = 0.7f;
+    
+        [Tooltip("The height percentage where the cloud completely fades out at the top.")]
+        [Range(0, 1)]
+        public float topFadeEnd = 1.0f;
+    }
+    
+    [System.Serializable]
+    public class LightSettings
+    {
+        public float LightAbsorptionThroughCloud = 0.15f;
+        public float LightAbsorptionTowardSun = 0.25f;
+        public int LightSteps = 15;
         public float DarknessThreshold = 0.1f;
+        
+        [Header("Phase Parameters")]
+        [Range(0, 1)]
+        public float forwardScattering = 0.1f;
+        [Range(0, 1)]
+        public float backwardScattering = 0.25f;
+        [Range(0, 1)]
+        public float baseBrightness = 0.5f;
+        [Range(0, 5)] 
+        public float phaseFactor = 0f;
     }
 
     [System.Serializable]
@@ -49,6 +80,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     public Color color = new Color(1,1,1,1);
     public float renderDistance = 1000;
     
+    public LightSettings lightSettings = new LightSettings();
     public CloudSettings cloudSettings = new CloudSettings();
     public DetailCloudSettings detailCloudSettings = new DetailCloudSettings();
     public BlueNoiseSettings blueNoiseSettings = new BlueNoiseSettings();
@@ -65,6 +97,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
         private class PassData
         {
             // Settings are copied here each frame.
+            public VolumetricCloudsFeature.LightSettings lightSettings;
             public VolumetricCloudsFeature.CloudSettings cloudSettings;
             public VolumetricCloudsFeature.DetailCloudSettings detailCloudSettings;
             public VolumetricCloudsFeature.BlueNoiseSettings blueNoiseSettings;
@@ -106,19 +139,33 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             data.material.SetVector("_BoundsMax", data._BoundsMax);
             data.material.SetVector("_ContainerScale", data.containerScale);
             
+            // Light Settings
+            data.material.SetFloat("_LightAbsorptionThroughCloud", data.lightSettings.LightAbsorptionThroughCloud);
+            data.material.SetFloat("_LightAbsorptionTowardSun", data.lightSettings.LightAbsorptionTowardSun);
+            data.material.SetInt("_LightSteps", data.lightSettings.LightSteps);
+            Vector4 phaseParams = new Vector4(
+                data.lightSettings.forwardScattering,
+                data.lightSettings.backwardScattering,
+                data.lightSettings.baseBrightness,
+                data.lightSettings.phaseFactor
+            );
+            data.material.SetVector("_PhaseParams", phaseParams);
+            data.material.SetFloat("_DarknessThreshold", data.lightSettings.DarknessThreshold);
+            
             // Cloud Settings
             data.material.SetInt("_Steps", data.cloudSettings.Steps);
-            data.material.SetInt("_LightSteps", data.cloudSettings.LightSteps);
             data.material.SetFloat("_CloudScale", data.cloudSettings.CloudScale);
-            data.material.SetFloat("_CloudSmooth", data.cloudSettings.CloudSmooth);
+            Vector4 heightParams = new Vector4(
+                data.cloudSettings.bottomFadeStart,
+                data.cloudSettings.bottomFadeEnd,
+                data.cloudSettings.topFadeStart,
+                data.cloudSettings.topFadeEnd
+            );
+            data.material.SetVector("_CloudHeightParams", heightParams);
             data.material.SetVector("_Wind", data.cloudSettings.Wind);
-            data.material.SetFloat("_LightAbsorptionThroughCloud", data.cloudSettings.LightAbsorptionThroughCloud);
-            data.material.SetVector("_PhaseParams", data.cloudSettings.PhaseParams);
-            data.material.SetFloat("_ContainerEdgeFadeDst", data.cloudSettings.ContainerEdgeFadeDst);
+            data.material.SetFloat("_ContainerFade", data.cloudSettings.ContainerFade);
             data.material.SetFloat("_DensityThreshold", data.cloudSettings.DensityThreshold);
             data.material.SetFloat("_DensityMultiplier", data.cloudSettings.DensityMultiplier);
-            data.material.SetFloat("_LightAbsorptionTowardSun", data.cloudSettings.LightAbsorptionTowardSun);
-            data.material.SetFloat("_DarknessThreshold", data.cloudSettings.DarknessThreshold);
 
             // Detail Cloud Settings
             data.material.SetFloat("_DetailCloudWeight", data.detailCloudSettings.detailCloudWeight);
@@ -134,7 +181,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             data.material.SetTexture("_BlueNoiseTexure", data.blueNoiseSettings.BlueNoiseTexure);
             
 
-            Debug.Log("Executing cloud pass with density multiplier: " + data.cloudSettings.DensityMultiplier);
+            //Debug.Log("Executing cloud pass with density multiplier: " + data.cloudSettings.DensityMultiplier);
             
             // This is the correct way to draw a full-screen effect.
             // It tells the GPU to run our shader 3 times (for 3 vertices of a triangle)
@@ -169,6 +216,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 passData._BoundsMax = container.position + container.lossyScale / 2;
                 passData.containerScale = container.lossyScale;
                 
+                passData.lightSettings = m_Feature.lightSettings;
                 passData.cloudSettings = m_Feature.cloudSettings;
                 passData.detailCloudSettings = m_Feature.detailCloudSettings;
                 passData.blueNoiseSettings = m_Feature.blueNoiseSettings;
