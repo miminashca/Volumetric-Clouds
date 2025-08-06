@@ -58,6 +58,7 @@ Shader "Unlit/VolumetricClouds"
                 float _LightAbsorptionTowardSun;
                 float4 _PhaseParams;
                 float _DarknessThreshold;
+                float _PowderEffectIntensity;
             
                 // Cloud Settings
                 int _Steps;
@@ -182,6 +183,10 @@ Shader "Unlit/VolumetricClouds"
                 return edgeWeight;
             }
             
+            float powder(float d, float powderIntensity) {
+                return exp(-d * _LightAbsorptionTowardSun) * (1.0 - exp(-d * _LightAbsorptionTowardSun * 2.0 * powderIntensity));
+            }
+            
             float3 sampleDensity(float3 position)
             {
                 // Calculate texture sample positions
@@ -268,8 +273,9 @@ Shader "Unlit/VolumetricClouds"
                     if (density > 0)
                     {
                         float lightTransmittance = lightmarch(worldRayOrigin);
+                        float powderTerm = powder(density * stepSize, _PowderEffectIntensity);
                         
-                        lightEnergy += density * stepSize * transmittance * lightTransmittance;
+                        lightEnergy += density * stepSize * transmittance * (lightTransmittance + powderTerm);
                         transmittance *= exp(-density * stepSize * _LightAbsorptionThroughCloud);
                     
                         if (transmittance < 0.01)
@@ -283,7 +289,7 @@ Shader "Unlit/VolumetricClouds"
                 // Final Color Calculation 
                 // Calculate final alpha based on how much light was blocked.
                 float finalAlpha = 1.0 - transmittance;
-                float4 cloudCol = float4((lightEnergy + phaseVal * transmittance) * _Color.rgb , 1);
+                float4 cloudCol = float4((lightEnergy + (phaseVal * transmittance)) * _Color.rgb , 1);
 
                 return lerp(sceneColor, cloudCol, finalAlpha);
             }
