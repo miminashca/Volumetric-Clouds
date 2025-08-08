@@ -18,17 +18,17 @@ MonoBehaviour:
   color: {r: 0.9716981, g: 0.91211283, b: 0.96271086, a: 1}
   renderDistance: 10000
   lightSettings:
-    LightAbsorptionThroughCloud: 0.83
+    LightAbsorptionThroughCloud: 0.65
     LightAbsorptionTowardSun: 1.87
     LightSteps: 8
-    DarknessThreshold: 0.14
+    DarknessThreshold: 0.16
     powderEffectIntensity: 0.7
     forwardScattering: 0.892
     backwardScattering: 0.25
     baseBrightness: 0.5
     phaseFactor: 4.27
   cloudSettings:
-    Steps: 30
+    Steps: 69
     CloudNoiseTexure: {fileID: 11700000, guid: da2ff9144035b4b3a9353bed8293c889, type: 2}
     CloudScale: 3.66
     Wind: {x: 0, y: 0, z: 0}
@@ -36,14 +36,14 @@ MonoBehaviour:
     DensityMultiplier: 9.37
     ContainerFade: 0.262
     bottomFadeStart: 0
-    bottomFadeEnd: 0.206
+    bottomFadeEnd: 0
     topFadeStart: 0.629
     topFadeEnd: 1
   detailCloudSettings:
     detailCloudWeight: 0.097
     DetailCloudNoiseTexure: {fileID: 11700000, guid: 70847bbd9900c464ab8ba2cc6ef94e15, type: 2}
     DetailCloudScale: 14.7
-    DetailCloudWind: {x: 0.01, y: 0, z: 0}
+    DetailCloudWind: {x: 0, y: 0, z: 0}
   blueNoiseSettings:
     BlueNoiseTexure: {fileID: 2800000, guid: 3c1507379d7fe415a8f524a9a7e71bd2, type: 3}
     RayOffsetStrength: 3
