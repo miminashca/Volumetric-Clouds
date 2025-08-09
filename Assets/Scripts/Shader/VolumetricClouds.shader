@@ -26,7 +26,7 @@ Shader "Unlit/VolumetricClouds"
             TEXTURE2D_X(_BlitTexture);
             SAMPLER(sampler_BlitTexture);
 
-            // THE FIX: Declare the camera depth texture so we can access it.
+            // Declare the camera depth texture so we can access it.
             TEXTURE2D_X_FLOAT(_CameraDepthTexture);
             SAMPLER(sampler_CameraDepthTexture);
             
@@ -51,6 +51,8 @@ Shader "Unlit/VolumetricClouds"
                 float3 _BoundsMin, _BoundsMax;
                 float3 _ContainerScale;
                 float _RenderDistance;
+
+                float4x4 _FrustumCorners;
 
                 // Light Settings
                 int _LightSteps;
@@ -94,9 +96,11 @@ Shader "Unlit/VolumetricClouds"
                 // Standard fullscreen triangle generation
                 OUT.positionHCS = GetFullScreenTriangleVertexPosition(IN.vertexID);
                 OUT.uv = GetFullScreenTriangleTexCoord(IN.vertexID);
-                OUT.viewVector = GetCameraRelativePositionWS(OUT.positionHCS);
-                // Scale the horizontal component of the view vector by the aspect ratio.
-                OUT.viewVector.x *= _ScreenParams.x / _ScreenParams.y;
+
+                float3 frustumVectorX = lerp(_FrustumCorners[0].xyz, _FrustumCorners[3].xyz, OUT.uv.x);
+                float3 frustumVectorY = lerp(_FrustumCorners[1].xyz, _FrustumCorners[2].xyz, OUT.uv.x);
+
+                OUT.viewVector = lerp(frustumVectorX, frustumVectorY, OUT.uv.y);
 
                 return OUT;
             }
@@ -234,10 +238,9 @@ Shader "Unlit/VolumetricClouds"
 
                 float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
 
-                // Ray Setup in World Space
+                // Ray Setup
                 float3 worldRayOrigin = _WorldSpaceCameraPos;
-                float3 viewSpaceDir = normalize(IN.viewVector);
-                float3 worldRayDir = mul((float3x3)UNITY_MATRIX_I_V, float3(viewSpaceDir.x, -viewSpaceDir.y, -viewSpaceDir.z));
+                float3 worldRayDir = normalize(IN.viewVector);
                 
                 float2 rayBoxInfo = rayBoxDst(_BoundsMin, _BoundsMax, worldRayOrigin, 1/worldRayDir);
                 float dstToBox = rayBoxInfo.x;

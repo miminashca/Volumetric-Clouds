@@ -16,11 +16,11 @@ MonoBehaviour:
   material: {fileID: 2100000, guid: 4af0f5a6417214f6eb3ca5aa470c971e, type: 2}
   renderPassEvent: 550
   color: {r: 0.9716981, g: 0.91211283, b: 0.96271086, a: 1}
-  renderDistance: 10000
+  renderDistance: 1000
   lightSettings:
     LightAbsorptionThroughCloud: 0.65
     LightAbsorptionTowardSun: 1.87
-    LightSteps: 8
+    LightSteps: 10
     DarknessThreshold: 0.16
     powderEffectIntensity: 0.7
     forwardScattering: 0.892
@@ -28,7 +28,7 @@ MonoBehaviour:
     baseBrightness: 0.5
     phaseFactor: 4.27
   cloudSettings:
-    Steps: 69
+    Steps: 35
     CloudNoiseTexure: {fileID: 11700000, guid: da2ff9144035b4b3a9353bed8293c889, type: 2}
     CloudScale: 3.66
     Wind: {x: 0, y: 0, z: 0}
@@ -36,7 +36,7 @@ MonoBehaviour:
     DensityMultiplier: 9.37
     ContainerFade: 0.262
     bottomFadeStart: 0
-    bottomFadeEnd: 0
+    bottomFadeEnd: 0.123
     topFadeStart: 0.629
     topFadeEnd: 1
   detailCloudSettings:

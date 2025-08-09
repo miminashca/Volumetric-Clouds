@@ -52,10 +52,10 @@ Material:
     - _DetailCloudWeight: 0.097
     - _LightAbsorptionThroughCloud: 0.65
     - _LightAbsorptionTowardSun: 1.87
-    - _LightSteps: 8
+    - _LightSteps: 10
     - _RayOffsetStrength: 3
-    - _RenderDistance: 10000
-    - _Steps: 69
+    - _RenderDistance: 1000
+    - _Steps: 35
     - _Threshold: 0.1
     m_Colors:
     - _BoundsMax: {r: 150, g: 50, b: 150, a: 0}

@@ -90,7 +90,6 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     
     private CustomRenderPass m_ScriptablePass;
 
-    // The pass class itself. It's now much simpler.
     private class CustomRenderPass : ScriptableRenderPass
     {
         // A reference to the parent feature to access its settings.
@@ -114,6 +113,8 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             public Matrix4x4 containerLocalToWorld;
             public Vector3 _BoundsMin, _BoundsMax;
             public Vector3 containerScale;
+            
+            public Matrix4x4 frustumCorners;
         }
 
         // The constructor now only takes the feature reference.
@@ -141,6 +142,8 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             data.material.SetVector("_BoundsMin", data._BoundsMin);
             data.material.SetVector("_BoundsMax", data._BoundsMax);
             data.material.SetVector("_ContainerScale", data.containerScale);
+            
+            data.material.SetMatrix("_FrustumCorners", data.frustumCorners);
             
             // Light Settings
             data.material.SetFloat("_LightAbsorptionThroughCloud", data.lightSettings.LightAbsorptionThroughCloud);
@@ -220,6 +223,9 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 passData._BoundsMax = container.position + container.lossyScale / 2;
                 passData.containerScale = container.lossyScale;
                 
+                var cameraData = frameData.Get<UniversalCameraData>();
+                passData.frustumCorners = m_Feature.GetFrustumCorners(cameraData.camera);
+                
                 passData.lightSettings = m_Feature.lightSettings;
                 passData.cloudSettings = m_Feature.cloudSettings;
                 passData.detailCloudSettings = m_Feature.detailCloudSettings;
@@ -262,5 +268,25 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
         }
         m_ScriptablePass.ConfigureInput(ScriptableRenderPassInput.Depth);
         renderer.EnqueuePass(m_ScriptablePass);
+    }
+    
+    
+    
+    private Matrix4x4 GetFrustumCorners(Camera camera)
+    {
+        var frustumCorners = new Vector3[4];
+        // This Unity function calculates the world-space positions of the frustum corners on the far clip plane
+        camera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), camera.farClipPlane, Camera.MonoOrStereoscopicEye.Mono, frustumCorners);
+
+        var frustumCornersMatrix = new Matrix4x4();
+
+        // The vectors are relative to the camera's transform. We need them in world space.
+        // The order is: [0]Bottom-Left, [1]Top-Left, [2]Top-Right, [3]Bottom-Right
+        frustumCornersMatrix.SetRow(0, camera.transform.TransformDirection(frustumCorners[0]));
+        frustumCornersMatrix.SetRow(1, camera.transform.TransformDirection(frustumCorners[1]));
+        frustumCornersMatrix.SetRow(2, camera.transform.TransformDirection(frustumCorners[2]));
+        frustumCornersMatrix.SetRow(3, camera.transform.TransformDirection(frustumCorners[3]));
+
+        return frustumCornersMatrix;
     }
 }
