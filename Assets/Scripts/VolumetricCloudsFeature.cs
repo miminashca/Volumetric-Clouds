@@ -84,6 +84,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     public Material material; // The material to use for the pass.
     public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingSkybox;
     public Color color = new Color(1,1,1,1);
+    public Color shadowColor = new Color(0.7f,0.9f,0.9f,1);
     public float renderDistance = 1000;
     
     public LightSettings lightSettings = new LightSettings();
@@ -110,6 +111,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             // Other pass-specific data.
             public Material material;
             public Color color;
+            public Color shadowColor;
             public float renderDistance;
             
             public Matrix4x4 containerWorldToLocal;
@@ -138,6 +140,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             }
             
             data.material.SetColor("_Color", data.color);
+            data.material.SetColor("_ShadowColor", data.shadowColor);
             data.material.SetFloat("_RenderDistance", data.renderDistance);
             
             data.material.SetMatrix("_ContainerWorldToLocal", data.containerWorldToLocal);
@@ -216,6 +219,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 // This happens every frame, ensuring the latest Inspector values are used.
                 passData.material = m_Feature.material;
                 passData.color = m_Feature.color;
+                passData.shadowColor = m_Feature.shadowColor;
                 passData.renderDistance = m_Feature.renderDistance;
                 
                 Transform container = VolumetricCloudsManager.Instance.cloudContainer;

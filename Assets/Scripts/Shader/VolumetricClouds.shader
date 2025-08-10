@@ -46,6 +46,7 @@ Shader "Unlit/VolumetricClouds"
             CBUFFER_START(UnityPerMaterial)
                 // Feature Settings
                 half4 _Color;
+                half4 _ShadowColor;
                 float4x4 _ContainerWorldToLocal;
                 float4x4 _ContainerLocalToWorld;
                 float3 _BoundsMin, _BoundsMax;
@@ -212,14 +213,20 @@ Shader "Unlit/VolumetricClouds"
                 return 0;
             }
             
-            float lightmarch(float3 marchPosition) {
+            half3 lightmarch(float3 marchPosition) {
                 float3 dirToLight = GetMainLight().direction;
                 float3 invLightDir = 1.0 / dirToLight;
                 
                 float lightRayLength = rayBoxDst(_BoundsMin, _BoundsMax, marchPosition, invLightDir).y;
                 lightRayLength = min(lightRayLength, _RenderDistance);
+
+                if (lightRayLength <= 0.01)
+                {
+                    // If there's no path, return the full, bright light color.
+                    return GetMainLight().color;
+                }
                 
-                if (lightRayLength <= 0) return 1.0;
+                //if (lightRayLength <= 0) return 1.0;
                 
                 float stepSize = lightRayLength/_LightSteps;
                 float totalDensity = 0;
@@ -232,7 +239,11 @@ Shader "Unlit/VolumetricClouds"
                 }
 
                 float transmittance = beer(totalDensity * _LightAbsorptionTowardSun);
-                return _DarknessThreshold + transmittance * (1.0 - _DarknessThreshold);
+                
+                float remappedTransmittance = _DarknessThreshold + transmittance * (1.0 - _DarknessThreshold);
+                
+                return lerp(_ShadowColor.rgb, GetMainLight().color, remappedTransmittance);
+                //return _DarknessThreshold + transmittance * (1.0 - _DarknessThreshold);
             }
 
             half4 frag(Varyings IN) : SV_Target
@@ -285,10 +296,12 @@ Shader "Unlit/VolumetricClouds"
                     
                     if (density > 0)
                     {
-                        float lightTransmittance = lightmarch(samplePoint);
+                        half3 lightTransmittance = lightmarch(samplePoint);
                         float powderTerm = powder(density * stepSize, _PowderEffectIntensity);
+                        half3 lightForStep = lightTransmittance + powderTerm * GetMainLight().color;
                         
-                        lightEnergy += density * stepSize * transmittance * (lightTransmittance + powderTerm);
+                        lightEnergy += density * stepSize * transmittance * lightForStep;
+                        
                         transmittance *= exp(-density * stepSize * _LightAbsorptionThroughCloud);
                     
                         if (transmittance < 0.01f)
@@ -301,10 +314,20 @@ Shader "Unlit/VolumetricClouds"
 
                 // Final Color Calculation 
                 // Calculate final alpha based on how much light was blocked.
-                float finalAlpha = 1.0 - transmittance;
-                float4 cloudCol = float4((lightEnergy + (phaseVal * transmittance)) * _Color.rgb , finalAlpha);
+                
+                // float finalAlpha = 1.0 - transmittance;
+                // //float4 cloudCol = float4((lightEnergy + (phaseVal * transmittance)) * _Color.rgb , finalAlpha);
+                // float4 cloudCol = float4(lerp(_ShadowColor.rgb, _Color.rgb, (lightEnergy + (phaseVal * transmittance))), finalAlpha);
+                //
+                // return lerp(sceneColor, cloudCol, finalAlpha);
 
+                half3 phaseGlow = phaseVal * transmittance * GetMainLight().color;
+                half3 totalLight = lightEnergy + phaseGlow;
+                half3 finalCloudRGB = totalLight * _Color.rgb;
+                float finalAlpha = 1.0 - transmittance;
+                float4 cloudCol = float4(finalCloudRGB, finalAlpha);
                 return lerp(sceneColor, cloudCol, finalAlpha);
+
             }
             
             ENDHLSL
