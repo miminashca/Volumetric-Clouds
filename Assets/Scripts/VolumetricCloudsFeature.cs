@@ -10,7 +10,8 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     [System.Serializable]
     public class CloudSettings
     {
-        public int Steps = 15;
+        [Range(1f, 20f)]
+        public int StepSize = 5;
         public Texture3D CloudNoiseTexure;
         public float CloudScale = 1;
         public Vector3 Wind = new Vector3(1,0,0);
@@ -43,6 +44,8 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     {
         public float LightAbsorptionThroughCloud = 0.15f;
         public float LightAbsorptionTowardSun = 0.25f;
+        
+        [Range(1f, 50f)]
         public int LightSteps = 15;
         public float DarknessThreshold = 0.1f;
         
@@ -160,7 +163,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             data.material.SetFloat("_PowderEffectIntensity", data.lightSettings.powderEffectIntensity);
             
             // Cloud Settings
-            data.material.SetInt("_Steps", data.cloudSettings.Steps);
+            data.material.SetInt("_StepSize", data.cloudSettings.StepSize);
             data.material.SetFloat("_CloudScale", data.cloudSettings.CloudScale);
             Vector4 heightParams = new Vector4(
                 data.cloudSettings.bottomFadeStart,

@@ -63,7 +63,7 @@ Shader "Unlit/VolumetricClouds"
                 float _PowderEffectIntensity;
             
                 // Cloud Settings
-                int _Steps;
+                int _StepSize;
                 float _CloudScale;
                 float4 _CloudHeightParams;
                 float3 _Wind;
@@ -197,37 +197,42 @@ Shader "Unlit/VolumetricClouds"
                 float3 size = _BoundsMax - _BoundsMin;
                 //float3 uvw = position * _CloudScale * 0.001 + _Wind.xyz * 0.1 * _Time.y * _CloudScale;
                 float3 uvw = (size * 0.5 + position) * _CloudScale * 0.001 + _Wind.xyz * 0.1 * _Time.y * _CloudScale;
-                float shapeNoise = SAMPLE_TEXTURE3D_LOD(_CloudNoiseTexure, sampler_CloudNoiseTexure, uvw, 0);
+                float3 shapeNoise = SAMPLE_TEXTURE3D_LOD(_CloudNoiseTexure, sampler_CloudNoiseTexure, uvw, 0).r;
 
-                if (shapeNoise > 0)
+                if (shapeNoise.x > 0.0f)
                 {
                     float3 duvw = (size * 0.5 + position) * _DetailCloudScale * 0.001 + _DetailCloudWind.xyz * 0.1 * _Time.y * _DetailCloudScale;
-                    float detailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, duvw, 0);
+                    float3 detailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, duvw, 0);
                     
                     float density = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
+                    //float density = ((shapeNoise.x - detailNoise.x * _DetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
                     return density * edgeWeight(position);
                 }
                 
                 return 0;
             }
             
-            float lightmarch(float3 position) {
+            float lightmarch(float3 marchPosition) {
                 float3 dirToLight = GetMainLight().direction;
+                float3 invLightDir = 1.0 / dirToLight;
                 
-                float dstInsideBox = rayBoxDst(_BoundsMin, _BoundsMax, position, 1/dirToLight).y;
+                float lightRayLength = rayBoxDst(_BoundsMin, _BoundsMax, marchPosition, invLightDir).y;
+                lightRayLength = min(lightRayLength, _RenderDistance);
                 
-                float stepSize = dstInsideBox/_LightSteps;
+                if (lightRayLength <= 0) return 1.0;
+                
+                float stepSize = lightRayLength/_LightSteps;
                 float totalDensity = 0;
                 
-                position += dirToLight * stepSize * .5;
+                marchPosition += dirToLight * stepSize * .5;
                 
                 for (int step = 0; step < _LightSteps; step++) {
-                    totalDensity += max(0, sampleDensity(position) * stepSize);
-                    position += dirToLight * stepSize;
+                    totalDensity += max(0, sampleDensity(marchPosition) * stepSize);
+                    marchPosition += dirToLight * stepSize;
                 }
 
                 float transmittance = beer(totalDensity * _LightAbsorptionTowardSun);
-                return _DarknessThreshold + transmittance * (1-_DarknessThreshold);
+                return _DarknessThreshold + transmittance * (1.0 - _DarknessThreshold);
             }
 
             half4 frag(Varyings IN) : SV_Target
@@ -245,16 +250,19 @@ Shader "Unlit/VolumetricClouds"
                 float2 rayBoxInfo = rayBoxDst(_BoundsMin, _BoundsMax, worldRayOrigin, 1/worldRayDir);
                 float dstToBox = rayBoxInfo.x;
                 float dstInsideBox = rayBoxInfo.y;
-                
 
-                if (dstInsideBox <= 0 || dstToBox > sceneDepth || dstToBox  > _RenderDistance)
+                float effectiveRenderDistance = min(_RenderDistance, sceneDepth);
+                float dstLimit = min(dstInsideBox, effectiveRenderDistance - dstToBox);
+
+                // If the cloud container is further away than this distance, quit.
+                if (dstToBox >= effectiveRenderDistance || dstLimit <= 0)
                 {
-                    return sceneColor; 
+                    return sceneColor;
                 }
 
                 // Raymarching Loop
-                float stepSize = dstInsideBox / _Steps;
-                float dstLimit = min(dstInsideBox, sceneDepth - dstToBox);
+                //float stepSize = dstInsideBox / (float)_Steps;
+                float stepSize = _StepSize;
 
                 float randomOffset = SAMPLE_TEXTURE2D_LOD(_BlueNoiseTexure, sampler_BlueNoiseTexure, squareUV(IN.uv*3), 0) * _RayOffsetStrength;
                 
@@ -269,19 +277,21 @@ Shader "Unlit/VolumetricClouds"
 
                 while (dstTravelled < dstLimit)
                 {
-                    worldRayOrigin = entryPoint + worldRayDir * dstTravelled;
+                    float3 samplePoint = entryPoint + worldRayDir * dstTravelled;
                     
-                    float density = sampleDensity(worldRayOrigin);
+                    if(length(samplePoint - worldRayOrigin) > _RenderDistance) break;
+                    
+                    float density = sampleDensity(samplePoint);
                     
                     if (density > 0)
                     {
-                        float lightTransmittance = lightmarch(worldRayOrigin);
+                        float lightTransmittance = lightmarch(samplePoint);
                         float powderTerm = powder(density * stepSize, _PowderEffectIntensity);
                         
                         lightEnergy += density * stepSize * transmittance * (lightTransmittance + powderTerm);
                         transmittance *= exp(-density * stepSize * _LightAbsorptionThroughCloud);
                     
-                        if (transmittance < 0.01)
+                        if (transmittance < 0.01f)
                         {
                             break;
                         }
@@ -292,7 +302,7 @@ Shader "Unlit/VolumetricClouds"
                 // Final Color Calculation 
                 // Calculate final alpha based on how much light was blocked.
                 float finalAlpha = 1.0 - transmittance;
-                float4 cloudCol = float4((lightEnergy + (phaseVal * transmittance)) * _Color.rgb , 1);
+                float4 cloudCol = float4((lightEnergy + (phaseVal * transmittance)) * _Color.rgb , finalAlpha);
 
                 return lerp(sceneColor, cloudCol, finalAlpha);
             }

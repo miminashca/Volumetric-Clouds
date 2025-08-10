@@ -46,21 +46,21 @@ Material:
     - _CloudSmooth: 4.16
     - _ContainerEdgeFadeDst: 1
     - _DarknessThreshold: 0.16
-    - _DensityMultiplier: 9.37
+    - _DensityMultiplier: 15.93
     - _DensityThreshold: 0.54
-    - _DetailCloudScale: 14.7
-    - _DetailCloudWeight: 0.097
+    - _DetailCloudScale: 13.81
+    - _DetailCloudWeight: 0.136
     - _LightAbsorptionThroughCloud: 0.65
     - _LightAbsorptionTowardSun: 1.87
-    - _LightSteps: 10
+    - _LightSteps: 18
     - _RayOffsetStrength: 3
-    - _RenderDistance: 1000
-    - _Steps: 35
+    - _RenderDistance: 717.8
+    - _Steps: 9
     - _Threshold: 0.1
     m_Colors:
-    - _BoundsMax: {r: 150, g: 50, b: 150, a: 0}
-    - _BoundsMin: {r: -150, g: -50, b: -150, a: 0}
-    - _Color: {r: 0.9716981, g: 0.91211283, b: 0.96271086, a: 1}
+    - _BoundsMax: {r: 150, g: 43, b: 150, a: 0}
+    - _BoundsMin: {r: -150, g: -57, b: -150, a: 0}
+    - _Color: {r: 0.972549, g: 0.9137255, b: 0.9218184, a: 1}
     - _DetailCloudWind: {r: 0, g: 0, b: 0, a: 0}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
     - _PhaseParams: {r: 0.892, g: 0.25, b: 0.5, a: 4.27}
