@@ -72,6 +72,15 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
         public float DetailCloudScale = 1;
         public Vector3 DetailCloudWind = new Vector3(0.5f,0,0);
     }
+    
+    [System.Serializable]
+    public class ExtraDetailCloudSettings
+    {
+        [Range(0, 1)]
+        public float extraDetailCloudWeight = 0.24f;
+        public float extraDetailCloudScale = 1;
+        public Vector3 extraDetailCloudWind = new Vector3(0.5f,0,0);
+    }
 
     [System.Serializable]
     public class BlueNoiseSettings
@@ -90,6 +99,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     public LightSettings lightSettings = new LightSettings();
     public CloudSettings cloudSettings = new CloudSettings();
     public DetailCloudSettings detailCloudSettings = new DetailCloudSettings();
+    public ExtraDetailCloudSettings extraDetailCloudSettings = new ExtraDetailCloudSettings();
     public BlueNoiseSettings blueNoiseSettings = new BlueNoiseSettings();
     
     private CustomRenderPass m_ScriptablePass;
@@ -106,6 +116,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             public VolumetricCloudsFeature.LightSettings lightSettings;
             public VolumetricCloudsFeature.CloudSettings cloudSettings;
             public VolumetricCloudsFeature.DetailCloudSettings detailCloudSettings;
+            public VolumetricCloudsFeature.ExtraDetailCloudSettings extraDetailCloudSettings;
             public VolumetricCloudsFeature.BlueNoiseSettings blueNoiseSettings;
             
             // Other pass-specific data.
@@ -184,6 +195,11 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             data.material.SetFloat("_DetailCloudWeight", data.detailCloudSettings.detailCloudWeight);
             data.material.SetFloat("_DetailCloudScale", data.detailCloudSettings.DetailCloudScale);
             data.material.SetVector("_DetailCloudWind", data.detailCloudSettings.DetailCloudWind);
+            
+            // Extra Detail Cloud Settings
+            data.material.SetFloat("_ExtraDetailCloudWeight", data.extraDetailCloudSettings.extraDetailCloudWeight);
+            data.material.SetFloat("_ExtraDetailCloudScale", data.extraDetailCloudSettings.extraDetailCloudScale);
+            data.material.SetVector("_ExtraDetailCloudWind", data.extraDetailCloudSettings.extraDetailCloudWind);
 
             // Blue Noise Settings
             data.material.SetFloat("_RayOffsetStrength", data.blueNoiseSettings.RayOffsetStrength);
@@ -236,6 +252,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 passData.lightSettings = m_Feature.lightSettings;
                 passData.cloudSettings = m_Feature.cloudSettings;
                 passData.detailCloudSettings = m_Feature.detailCloudSettings;
+                passData.extraDetailCloudSettings = m_Feature.extraDetailCloudSettings;
                 passData.blueNoiseSettings = m_Feature.blueNoiseSettings;
 
                 // Define pass inputs/outputs. Here we set the render target to the camera's active color buffer.

@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: VolumetricClouds
+  m_Name: VolumetricClouds 1
   m_Shader: {fileID: 4800000, guid: d794ad56956dd4251b5faad570c7d450, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -42,19 +42,19 @@ Material:
     m_Ints: []
     m_Floats:
     - _Alpha: 1
-    - _CloudScale: 6.88
+    - _CloudScale: 15.44
     - _CloudSmooth: 4.16
     - _ContainerEdgeFadeDst: 1
-    - _DarknessThreshold: 0.05
-    - _DensityMultiplier: 11.44
-    - _DensityThreshold: 0.5
-    - _DetailCloudScale: 18
-    - _DetailCloudWeight: 0.136
-    - _LightAbsorptionThroughCloud: 0.65
-    - _LightAbsorptionTowardSun: 1.2
-    - _LightSteps: 8
+    - _DarknessThreshold: 1.26
+    - _DensityMultiplier: 28
+    - _DensityThreshold: 0.6
+    - _DetailCloudScale: 9.01
+    - _DetailCloudWeight: 0.219
+    - _LightAbsorptionThroughCloud: 1.04
+    - _LightAbsorptionTowardSun: 0.05
+    - _LightSteps: 6
     - _RayOffsetStrength: 3
-    - _RenderDistance: 717.8
+    - _RenderDistance: 1000
     - _Steps: 9
     - _Threshold: 0.1
     m_Colors:
@@ -63,7 +63,7 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DetailCloudWind: {r: 0, g: 0, b: 0, a: 0}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
-    - _PhaseParams: {r: 0.92, g: 0.25, b: 0.54, a: 4.38}
+    - _PhaseParams: {r: 0.1, g: 0.25, b: 0.5, a: 0}
     - _Wind: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

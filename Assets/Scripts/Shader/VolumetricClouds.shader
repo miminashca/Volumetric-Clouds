@@ -12,6 +12,14 @@ Shader "Unlit/VolumetricClouds"
             // --- THIS IS THE CORRECT BLENDING FOR CLOUDS ---
             // It means: final = (our_color * our_alpha) + (screen_color * (1 - our_alpha))
             Blend SrcAlpha OneMinusSrcAlpha
+            //Blend SrcColor DstColor
+            //Blend DstColor SrcColor
+            //Blend SrcColor OneMinusSrcAlpha
+            //Blend SrcColor OneMinusSrcAlpha
+            //Blend SrcColor DstColor
+            //BlendOp Difference
+            //Blend 1 One Zero, Zero One
+            
             ZTest Always 
             Cull Off
 
@@ -76,6 +84,11 @@ Shader "Unlit/VolumetricClouds"
                 float _DetailCloudWeight;
                 float _DetailCloudScale;
                 float3 _DetailCloudWind;
+
+                // Extra Detail Cloud Settings
+                float _ExtraDetailCloudWeight;
+                float _ExtraDetailCloudScale;
+                float3 _ExtraDetailCloudWind;
 
                 // Blue Noise Settings
                 float _RayOffsetStrength;
@@ -204,9 +217,14 @@ Shader "Unlit/VolumetricClouds"
                 {
                     float3 duvw = (size * 0.5 + position) * _DetailCloudScale * 0.001 + _DetailCloudWind.xyz * 0.1 * _Time.y * _DetailCloudScale;
                     float3 detailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, duvw, 0);
+
+                    float3 eduvw = (size * 0.5 + position) * _ExtraDetailCloudScale * 0.001 + _ExtraDetailCloudWind.xyz * 0.1 * _Time.y * _ExtraDetailCloudScale;
+                    float3 extraDetailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, eduvw, 0);
                     
-                    float density = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
-                    //float density = ((shapeNoise.x - detailNoise.x * _DetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
+                    float density = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight));
+                    //density = max(0, lerp(density, extraDetailNoise.x, _ExtraDetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
+                    //density -= extraDetailNoise.x * _ExtraDetailCloudWeight;
+                    density = max(0, lerp(density, extraDetailNoise.x, _ExtraDetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
                     return density * edgeWeight(position);
                 }
                 
@@ -268,7 +286,9 @@ Shader "Unlit/VolumetricClouds"
                 // If the cloud container is further away than this distance, quit.
                 if (dstToBox >= effectiveRenderDistance || dstLimit <= 0)
                 {
-                    return sceneColor;
+                    //return sceneColor;
+                    // This early-out is correct for pixels that don't even intersect the container.
+                    return float4(0,0,0,0);
                 }
 
                 // Raymarching Loop
@@ -321,12 +341,18 @@ Shader "Unlit/VolumetricClouds"
                 //
                 // return lerp(sceneColor, cloudCol, finalAlpha);
 
+                // if (transmittance > 0.999f)
+                // {
+                //     return sceneColor;
+                // }
+                
                 half3 phaseGlow = phaseVal * transmittance * GetMainLight().color;
                 half3 totalLight = lightEnergy + phaseGlow;
                 half3 finalCloudRGB = totalLight * _Color.rgb;
                 float finalAlpha = 1.0 - transmittance;
                 float4 cloudCol = float4(finalCloudRGB, finalAlpha);
-                return lerp(sceneColor, cloudCol, finalAlpha);
+                //return lerp(sceneColor, cloudCol, finalAlpha);
+                return cloudCol;
 
             }
             
