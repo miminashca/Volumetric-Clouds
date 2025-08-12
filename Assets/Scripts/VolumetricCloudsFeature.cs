@@ -101,6 +101,8 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
     public Color color = new Color(1,1,1,1);
     public Color shadowColor = new Color(0.7f,0.9f,0.9f,1);
     public float renderDistance = 1000;
+    [Range(0,100f)]
+    public float debugDepthThreshold = 0;
     
     public LightSettings lightSettings = new LightSettings();
     public CloudSettings cloudSettings = new CloudSettings();
@@ -130,6 +132,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             public Color color;
             public Color shadowColor;
             public float renderDistance;
+            public float debugDepthThreshold;
             
             public Matrix4x4 containerWorldToLocal;
             public Matrix4x4 containerLocalToWorld;
@@ -159,6 +162,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             data.material.SetColor("_Color", data.color);
             data.material.SetColor("_ShadowColor", data.shadowColor);
             data.material.SetFloat("_RenderDistance", data.renderDistance);
+            data.material.SetFloat("_DepthThreshold", data.debugDepthThreshold);
             
             data.material.SetMatrix("_ContainerWorldToLocal", data.containerWorldToLocal);
             data.material.SetMatrix("_ContainerLocalToWorld", data.containerLocalToWorld);
@@ -248,6 +252,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 passData.color = m_Feature.color;
                 passData.shadowColor = m_Feature.shadowColor;
                 passData.renderDistance = m_Feature.renderDistance;
+                passData.debugDepthThreshold = m_Feature.debugDepthThreshold;
                 
                 Transform container = VolumetricCloudsManager.Instance.cloudContainer;
                 // Populate the bounds data from the transform.

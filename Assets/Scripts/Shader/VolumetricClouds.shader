@@ -60,6 +60,7 @@ Shader "Unlit/VolumetricClouds"
                 float3 _BoundsMin, _BoundsMax;
                 float3 _ContainerScale;
                 float _RenderDistance;
+                float _DepthThreshold;
 
                 float4x4 _FrustumCorners;
 
@@ -273,7 +274,7 @@ Shader "Unlit/VolumetricClouds"
                 half4 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_BlitTexture, IN.uv);
                 float rawDepth = SAMPLE_TEXTURE2D_X(_CameraDepthTexture, sampler_CameraDepthTexture, IN.uv);
 
-                float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
+                float sceneDepth = LinearEyeDepth(rawDepth, _ZBufferParams) - _DepthThreshold;
 
                 // Ray Setup
                 float3 worldRayOrigin = _WorldSpaceCameraPos;
