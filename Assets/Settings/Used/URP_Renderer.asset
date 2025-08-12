@@ -23,10 +23,10 @@ MonoBehaviour:
     LightAbsorptionTowardSun: 1.2
     LightSteps: 19
     DarknessThreshold: 0.05
-    powderEffectIntensity: 0.741
+    powderEffectIntensity: 0.852
     forwardScattering: 0.92
     backwardScattering: 0.25
-    baseBrightness: 0.54
+    baseBrightness: 0.363
     phaseFactor: 5
   cloudSettings:
     StepSize: 1
@@ -34,10 +34,12 @@ MonoBehaviour:
     CloudScale: 6.88
     Wind: {x: 0, y: 0, z: 0}
     DensityThreshold: 0.5
-    DensityMultiplier: 20
+    DensityMultiplier: 60
     ContainerFade: 0.222
+    CloudEdgeSoftnessStart: 0
+    CloudEdgeSoftnessEnd: 0.84
     bottomFadeStart: 0
-    bottomFadeEnd: 0
+    bottomFadeEnd: 0.081
     topFadeStart: 0.464
     topFadeEnd: 0.949
   detailCloudSettings:

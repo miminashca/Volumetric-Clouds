@@ -21,6 +21,12 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
         [Range(0f, 1f)]
         public float ContainerFade = 0;
         
+        [Header("Horizontal Shape")]
+        [Range(0f, 1f)]
+        public float CloudEdgeSoftnessStart = 0.1f;
+        [Range(0.01f, 5f)]
+        public float CloudEdgeSoftnessEnd = 0.5f;
+        
         [Header("Vertical Shape")]
         [Tooltip("The height percentage where the cloud begins to fade in from the bottom.")]
         [Range(0, 1)]
@@ -188,6 +194,11 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
             data.material.SetVector("_CloudHeightParams", heightParams);
             data.material.SetVector("_Wind", data.cloudSettings.Wind);
             data.material.SetFloat("_ContainerFade", data.cloudSettings.ContainerFade);
+            Vector2 horizParams = new Vector4(
+                data.cloudSettings.CloudEdgeSoftnessStart,
+                data.cloudSettings.CloudEdgeSoftnessEnd
+            );
+            data.material.SetVector("_CloudEdgeSoftness", horizParams);
             data.material.SetFloat("_DensityThreshold", data.cloudSettings.DensityThreshold);
             data.material.SetFloat("_DensityMultiplier", data.cloudSettings.DensityMultiplier);
 

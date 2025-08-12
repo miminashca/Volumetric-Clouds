@@ -77,6 +77,7 @@ Shader "Unlit/VolumetricClouds"
                 float4 _CloudHeightParams;
                 float3 _Wind;
                 float _ContainerFade;
+                float2 _CloudEdgeSoftness;
                 float _DensityThreshold;
                 float _DensityMultiplier;
 
@@ -221,10 +222,12 @@ Shader "Unlit/VolumetricClouds"
                     float3 eduvw = (size * 0.5 + position) * _ExtraDetailCloudScale * 0.001 + _ExtraDetailCloudWind.xyz * 0.1 * _Time.y * _ExtraDetailCloudScale;
                     float3 extraDetailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, eduvw, 0);
                     
-                    float density = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight));
-                    //density = max(0, lerp(density, extraDetailNoise.x, _ExtraDetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
-                    //density -= extraDetailNoise.x * _ExtraDetailCloudWeight;
-                    density = max(0, lerp(density, extraDetailNoise.x, _ExtraDetailCloudWeight) - _DensityThreshold) * _DensityMultiplier;
+                    float combinedNoise = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight));
+                    combinedNoise = max(0, lerp(combinedNoise, extraDetailNoise.x, _ExtraDetailCloudWeight));
+
+                    float density = smoothstep(_CloudEdgeSoftness.x, _CloudEdgeSoftness.y, combinedNoise - _DensityThreshold);
+
+                    density *= _DensityMultiplier;
                     return density * edgeWeight(position);
                 }
                 
