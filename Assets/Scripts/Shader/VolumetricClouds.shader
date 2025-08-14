@@ -69,7 +69,7 @@ Shader "Unlit/VolumetricClouds"
                 float _LightAbsorptionThroughCloud;
                 float _LightAbsorptionTowardSun;
                 float4 _PhaseParams;
-                float _DarknessThreshold;
+                //float _DarknessThreshold;
                 float _PowderEffectIntensity;
             
                 // Cloud Settings
@@ -144,8 +144,7 @@ Shader "Unlit/VolumetricClouds"
                 return _PhaseParams.z + hgBlend * _PhaseParams.w;
             }
             float beer(float d) {
-                float beer = exp(-d);
-                return beer;
+                return exp(-d);
             }
             float remap01(float v, float low, float high) {
                 return (v-low)/(high-low);
@@ -180,16 +179,18 @@ Shader "Unlit/VolumetricClouds"
                 float3 normalizedPos = (position - _BoundsMin) / (_BoundsMax - _BoundsMin);
 
                 // Sides fade
-                float fadeX = 1 - abs(normalizedPos.x * 2 - 1);
-                //float fadeY = 1 - abs(normalizedPos.y * 2 - 1);
-                float fadeZ = 1 - abs(normalizedPos.z * 2 - 1);
+                float fadeFromMinX = smoothstep(0.0, _ContainerFade, normalizedPos.x);
+                float fadeFromMinZ = smoothstep(0.0, _ContainerFade, normalizedPos.z);
 
-                float weightX = smoothstep(0, _ContainerFade, fadeX);
-                //float weightY = smoothstep(0, _ContainerFade, fadeY);
-                float weightZ = smoothstep(0, _ContainerFade, fadeZ);
+                float fadeFromMaxX = smoothstep(1.0, 1.0 - _ContainerFade, normalizedPos.x);
+                float fadeFromMaxZ = smoothstep(1.0, 1.0 - _ContainerFade, normalizedPos.z);
+                
+                // The result is 1.0 in the center and a smooth falloff at all edges.
+                float weightX = fadeFromMinX * fadeFromMaxX;
+                float weightZ = fadeFromMinZ * fadeFromMaxZ;
 
                 // Top-bottom fade
-                float heightPercent = (position.y - _BoundsMin.y) / (_BoundsMax.y - _BoundsMin.y);
+                float heightPercent = normalizedPos.y;
                 // Use smoothstep to create a soft fade-in at the bottom of the cloud
                 float bottomGradient = smoothstep(_CloudHeightParams.x, _CloudHeightParams.y, heightPercent);
                 // Use smoothstep to create a soft fade-out at the top of the cloud
@@ -213,15 +214,17 @@ Shader "Unlit/VolumetricClouds"
                 float3 size = _BoundsMax - _BoundsMin;
                 //float3 uvw = position * _CloudScale * 0.001 + _Wind.xyz * 0.1 * _Time.y * _CloudScale;
                 float3 uvw = (size * 0.5 + position) * _CloudScale * 0.001 + _Wind.xyz * 0.1 * _Time.y * _CloudScale;
-                float3 shapeNoise = SAMPLE_TEXTURE3D_LOD(_CloudNoiseTexure, sampler_CloudNoiseTexure, uvw, 0).r;
+
+                float3 shapeNoiseCoords = uvw * _CloudScale + _Wind.xyz * 0.01 * _Time.y;
+                float3 shapeNoise = SAMPLE_TEXTURE3D_LOD(_CloudNoiseTexure, sampler_CloudNoiseTexure, shapeNoiseCoords, 0).r;
 
                 if (shapeNoise.x > 0.0f)
                 {
-                    float3 duvw = (size * 0.5 + position) * _DetailCloudScale * 0.001 + _DetailCloudWind.xyz * 0.1 * _Time.y * _DetailCloudScale;
-                    float3 detailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, duvw, 0);
+                    float3 detailNoiseCoords = uvw * _DetailCloudScale + _DetailCloudWind.xyz * 0.01 * _Time.y;
+                    float3 detailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, detailNoiseCoords, 0);
 
-                    float3 eduvw = (size * 0.5 + position) * _ExtraDetailCloudScale * 0.001 + _ExtraDetailCloudWind.xyz * 0.1 * _Time.y * _ExtraDetailCloudScale;
-                    float3 extraDetailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, eduvw, 0);
+                    float3 extraDetailNoiseCoords = uvw * _ExtraDetailCloudScale + _ExtraDetailCloudWind.xyz * 0.01 * _Time.y;
+                    float3 extraDetailNoise = SAMPLE_TEXTURE3D_LOD(_DetailCloudNoiseTexure, sampler_DetailCloudNoiseTexure, extraDetailNoiseCoords, 0);
                     
                     float combinedNoise = max(0, lerp(shapeNoise.x, detailNoise.x, _DetailCloudWeight));
                     combinedNoise = max(0, lerp(combinedNoise, extraDetailNoise.x, _ExtraDetailCloudWeight));
@@ -236,35 +239,32 @@ Shader "Unlit/VolumetricClouds"
             }
             
             half3 lightmarch(float3 marchPosition) {
-                float3 dirToLight = GetMainLight().direction;
-                float3 invLightDir = 1.0 / dirToLight;
+                float3 lightDir = GetMainLight().direction;
+                float3 invLightDir = 1.0 / lightDir;
                 
                 float lightRayLength = rayBoxDst(_BoundsMin, _BoundsMax, marchPosition, invLightDir).y;
                 lightRayLength = min(lightRayLength, _RenderDistance);
 
-                if (lightRayLength <= 0.01)
+                if (lightRayLength <= 0.01f)
                 {
                     // If there's no path, return the full, bright light color.
                     return GetMainLight().color;
                 }
                 
-                //if (lightRayLength <= 0) return 1.0;
-                
                 float stepSize = lightRayLength/_LightSteps;
                 float totalDensity = 0;
                 
-                marchPosition += dirToLight * stepSize * .5;
+                marchPosition += lightDir * stepSize * .5f ;
                 
                 for (int step = 0; step < _LightSteps; step++) {
                     totalDensity += max(0, sampleDensity(marchPosition) * stepSize);
-                    marchPosition += dirToLight * stepSize;
+                    marchPosition += lightDir * stepSize;
                 }
 
                 float transmittance = beer(totalDensity * _LightAbsorptionTowardSun);
+                //float remappedTransmittance = _DarknessThreshold + transmittance * (1.0 - _DarknessThreshold);
                 
-                float remappedTransmittance = _DarknessThreshold + transmittance * (1.0 - _DarknessThreshold);
-                
-                return lerp(_ShadowColor.rgb, GetMainLight().color, remappedTransmittance);
+                return lerp(_ShadowColor.rgb, GetMainLight().color, transmittance);
                 //return _DarknessThreshold + transmittance * (1.0 - _DarknessThreshold);
             }
 
@@ -322,7 +322,7 @@ Shader "Unlit/VolumetricClouds"
                     {
                         half3 lightTransmittance = lightmarch(samplePoint);
                         float powderTerm = powder(density * stepSize, _PowderEffectIntensity);
-                        half3 lightForStep = lightTransmittance + powderTerm * GetMainLight().color;
+                        half3 lightForStep = lightTransmittance + powderTerm * GetMainLight().color * 2;
                         
                         lightEnergy += density * stepSize * transmittance * lightForStep;
                         
@@ -336,8 +336,7 @@ Shader "Unlit/VolumetricClouds"
                     dstTravelled += stepSize;
                 }
 
-                // Final Color Calculation 
-                // Calculate final alpha based on how much light was blocked.
+                
                 
                 // float finalAlpha = 1.0 - transmittance;
                 // //float4 cloudCol = float4((lightEnergy + (phaseVal * transmittance)) * _Color.rgb , finalAlpha);
@@ -349,10 +348,13 @@ Shader "Unlit/VolumetricClouds"
                 // {
                 //     return sceneColor;
                 // }
-                
+
+                // Final Color Calculation
                 half3 phaseGlow = phaseVal * transmittance * GetMainLight().color;
                 half3 totalLight = lightEnergy + phaseGlow;
-                half3 finalCloudRGB = totalLight * _Color.rgb;
+                half3 finalLitColor = _Color.rgb * GetMainLight().color;
+                half3 finalCloudRGB = lerp(_ShadowColor.rgb, finalLitColor, (totalLight));
+                //half3 finalCloudRGB = totalLight * _Color.rgb;
                 float finalAlpha = 1.0 - transmittance;
                 float4 cloudCol = float4(finalCloudRGB, finalAlpha);
                 //return lerp(sceneColor, cloudCol, finalAlpha);

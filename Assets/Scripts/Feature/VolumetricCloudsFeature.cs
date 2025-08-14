@@ -53,9 +53,9 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
         
         [Range(1f, 50f)]
         public int LightSteps = 15;
-        public float DarknessThreshold = 0.1f;
+        //public float DarknessThreshold = 0.1f;
         
-        [Range(0, 1)]
+        [Range(0, 10)]
         public float powderEffectIntensity = 0.5f;
         
         [Header("Phase Parameters")]
@@ -183,7 +183,7 @@ public class VolumetricCloudsFeature : ScriptableRendererFeature
                 data.lightSettings.phaseFactor
             );
             data.material.SetVector("_PhaseParams", phaseParams);
-            data.material.SetFloat("_DarknessThreshold", data.lightSettings.DarknessThreshold);
+            //data.material.SetFloat("_DarknessThreshold", data.lightSettings.DarknessThreshold);
             data.material.SetFloat("_PowderEffectIntensity", data.lightSettings.powderEffectIntensity);
             
             // Cloud Settings

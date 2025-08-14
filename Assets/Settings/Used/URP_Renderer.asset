@@ -16,41 +16,40 @@ MonoBehaviour:
   material: {fileID: 2100000, guid: 4af0f5a6417214f6eb3ca5aa470c971e, type: 2}
   renderPassEvent: 550
   color: {r: 1, g: 1, b: 1, a: 1}
-  shadowColor: {r: 0.009612241, g: 0.08330613, b: 0.157, a: 1}
+  shadowColor: {r: 0.21115166, g: 0.37525624, b: 0.6132076, a: 1}
   renderDistance: 1000
-  debugDepthThreshold: 2.1
+  debugDepthThreshold: 5.8
   lightSettings:
-    LightAbsorptionThroughCloud: 0.65
-    LightAbsorptionTowardSun: 1.2
-    LightSteps: 19
-    DarknessThreshold: 0.05
-    powderEffectIntensity: 0.852
-    forwardScattering: 0.92
+    LightAbsorptionThroughCloud: 5.05
+    LightAbsorptionTowardSun: 2.48
+    LightSteps: 4
+    powderEffectIntensity: 1.8
+    forwardScattering: 0.809
     backwardScattering: 0.25
-    baseBrightness: 0.363
-    phaseFactor: 5
+    baseBrightness: 0
+    phaseFactor: 4.62
   cloudSettings:
     StepSize: 1
     CloudNoiseTexure: {fileID: 11700000, guid: da2ff9144035b4b3a9353bed8293c889, type: 2}
-    CloudScale: 6.88
+    CloudScale: 2.59
     Wind: {x: 0, y: 0, z: 0}
     DensityThreshold: 0.5
-    DensityMultiplier: 60
-    ContainerFade: 0.222
+    DensityMultiplier: 2.79
+    ContainerFade: 0.042
     CloudEdgeSoftnessStart: 0
-    CloudEdgeSoftnessEnd: 0.84
+    CloudEdgeSoftnessEnd: 0.33
     bottomFadeStart: 0
-    bottomFadeEnd: 0.081
-    topFadeStart: 0.464
-    topFadeEnd: 0.949
+    bottomFadeEnd: 0.027
+    topFadeStart: 0.477
+    topFadeEnd: 1
   detailCloudSettings:
-    detailCloudWeight: 0.136
+    detailCloudWeight: 0.143
     DetailCloudNoiseTexure: {fileID: 11700000, guid: 70847bbd9900c464ab8ba2cc6ef94e15, type: 2}
-    DetailCloudScale: 18
+    DetailCloudScale: 4.77
     DetailCloudWind: {x: 0, y: 0, z: 0}
   extraDetailCloudSettings:
-    extraDetailCloudWeight: 0.107
-    extraDetailCloudScale: 31.7
+    extraDetailCloudWeight: 0.059
+    extraDetailCloudScale: 14.14
     extraDetailCloudWind: {x: 0, y: 0, z: 0}
   blueNoiseSettings:
     BlueNoiseTexure: {fileID: 2800000, guid: 3c1507379d7fe415a8f524a9a7e71bd2, type: 3}
