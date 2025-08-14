@@ -35,11 +35,11 @@ MonoBehaviour:
     Wind: {x: 0, y: 0, z: 0}
     DensityThreshold: 0.5
     DensityMultiplier: 2.79
-    ContainerFade: 0.042
+    ContainerFade: 0.144
     CloudEdgeSoftnessStart: 0
     CloudEdgeSoftnessEnd: 0.33
     bottomFadeStart: 0
-    bottomFadeEnd: 0.027
+    bottomFadeEnd: 0.605
     topFadeStart: 0.477
     topFadeEnd: 1
   detailCloudSettings:
